@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="Calibri: Enhancing Diffusion Transformers via Parameter-Efficient Calibration — CVPR 2026.">
+  <meta name="keywords" content="Calibri, Diffusion Transformers, DiT, CMA-ES, Parameter-Efficient Tuning, FLUX, SD3">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calibri: Parameter-Efficient Calibration of Diffusion Transformers</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <link rel="icon" href="figures/favicon.ico" type="image/x-icon">
+
+  <style>
+    body { font-family: 'Noto Sans', sans-serif; color: #2d2d2d; }
+    .title.is-1 { font-family: 'Google Sans', sans-serif; font-weight: 700; font-size: 2.4rem; line-height: 1.2; }
+    .title.is-2, .title.is-3, .title.is-4 { font-family: 'Google Sans', sans-serif; }
+    .publication-authors { font-family: 'Google Sans', sans-serif; font-size: 1.15rem; }
+    .affil-line { font-size: 0.95rem; color: #555; margin-top: 6px; }
+    .cvpr-badge {
+      display: inline-block;
+      background: #0b2a5b;
+      color: #fff;
+      font-family: 'Google Sans', sans-serif;
+      font-weight: 800;
+      font-size: 1.0rem;
+      padding: 0.18rem 0.7rem;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+      box-shadow: 0 6px 18px rgba(11, 42, 91, 0.28);
+      vertical-align: middle;
+    }
+    .button.is-dark { background-color: #2b2b2b; border-color: transparent; color: #fff; transition: all 0.25s ease; }
+    .button.is-dark:hover { background-color: #444; transform: translateY(-2px); }
+    .button.is-rounded { border-radius: 290486px; padding-left: calc(1em + .25em); padding-right: calc(1em + .25em); }
+    .section { padding: 3.5rem 1.5rem; }
+    .container.is-max-desktop { max-width: 960px; }
+    .hero.is-light { background-color: #f7f8fa; }
+    .teaser-image {
+      width: 100%; max-width: 1100px; height: auto;
+      border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.13);
+      display: block; margin: 0 auto;
+    }
+    .abstract-text { font-size: 1.08rem; line-height: 1.75; text-align: justify; }
+    .content-block { text-align: justify; margin-bottom: 2rem; }
+    .figure-block { margin: 2.5rem 0; }
+    .responsive-image { width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto; }
+    .figure-wrap { background: #fff; border-radius: 10px; box-shadow: 0 3px 14px rgba(0,0,0,0.08); padding: 10px; }
+    figcaption .caption-title { font-weight: 700; }
+    figcaption { margin-top: 0.9rem; font-size: 0.92rem; color: #555; line-height: 1.55; text-align: justify; }
+    .insight-box {
+      background: #f0f6ff; border-left: 4px solid #3273dc;
+      border-radius: 6px; padding: 1rem 1.4rem; margin: 1.5rem 0;
+      font-size: 1.0rem; line-height: 1.6;
+    }
+    .math-box {
+      background: #fff; border: 1px solid #eee; border-radius: 8px;
+      padding: 1.5rem; margin: 1.5rem 0; text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    .table-container { overflow-x: auto; margin-bottom: 2rem; }
+    .results-table caption {
+      caption-side: top; font-weight: 600; color: #4a4a4a;
+      margin-bottom: 0.5rem; text-align: center;
+      font-family: 'Google Sans', sans-serif;
+    }
+    .results-table th { background-color: #f2f2f2; color: #2d2d2d; text-align: center; vertical-align: middle; }
+    .results-table td { text-align: center; vertical-align: middle; }
+    .best-result { font-weight: 700; background-color: #d4f5e2 !important; color: #0a4728; }
+    .row-calibri td { background-color: #f3faf7; }
+    .bibtex-box {
+      background: #f5f5f5; border-radius: 6px; padding: 1.2rem;
+      font-family: 'Courier New', monospace; font-size: 0.88rem; white-space: pre; overflow-x: auto;
+    }
+    .section-divider { border: none; border-top: 1px solid #e5e5e5; margin: 0; }
+    footer { padding: 2rem 0; background-color: #f5f5f5; }
+  </style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<section class="hero">
+  <div class="hero-body" style="padding-bottom: 1.5rem;">
+    <div class="container is-max-desktop has-text-centered">
+      <h1 class="title is-1">Calibri: Enhancing Diffusion Transformers via<br>Parameter-Efficient Calibration</h1>
+      <div class="publication-authors mt-4">
+        <span style="margin-right: 18px;"><strong>Danil Tokhchukov</strong><sup>1,*</sup></span>
+        <span style="margin-right: 18px;"><strong>Aysel Mirzoeva</strong><sup>1</sup></span>
+        <span style="margin-right: 18px;"><strong>Andrey Kuznetsov</strong><sup>2,3</sup></span>
+        <span><strong>Konstantin Sobolev</strong><sup>1,2,*,†</sup></span>
+      </div>
+      <div class="affil-line mt-2">
+        <sup>1</sup>MSU &nbsp;&nbsp;
+        <sup>2</sup>FusionBrain Lab &nbsp;&nbsp;
+        <sup>3</sup>AXXX
+        <br><span class="cvpr-badge">CVPR 2026</span>
+      </div>
+      <div class="affil-line mt-2" style="font-size: 0.85rem;">
+        <sup>*</sup>The authors contributed equally.<br>
+        <sup>†</sup>Project lead, correspondence: ksobolev.info@gmail.com
+      </div>
+      <div class="mt-5">
+        <span class="link-block" style="margin: 4px;">
+          <a href="#" class="external-link button is-normal is-rounded is-dark"
+             onclick="alert('ArXiv coming soon!'); return false;">
+            <span class="icon"><i class="ai ai-arxiv"></i></span>
+            <span>arXiv (coming)</span>
+          </a>
+        </span>
+        <span class="link-block" style="margin: 4px;">
+          <a href="https://github.com/makriot/scaleguidance" class="external-link button is-normal is-rounded is-dark">
+            <span class="icon"><i class="fab fa-github"></i></span>
+            <span>Code</span>
+          </a>
+        </span>
+        <span class="link-block" style="margin: 4px;">
+          <a href="https://huggingface.co/makriot/flux-calibri" class="external-link button is-normal is-rounded is-dark">
+            <span class="icon" style="font-size:17px;">🤗</span>
+            <span>Models</span>
+          </a>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEASER ============ -->
+<section class="hero is-light">
+  <div class="hero-body" style="padding: 2rem 1.5rem 2.5rem;">
+    <div class="container" style="max-width: 1100px;">
+      <img src="figures/graphic_abstract__v4.jpg" alt="Calibri Visual Abstract" class="teaser-image">
+      <p style="text-align:center; margin-top: 1.2rem; font-size: 1.0rem; color: #555; max-width: 800px; margin-left: auto; margin-right: auto;">
+        <em>Calibri</em> — a parameter-efficient method for diffusion transformer calibration.
+        By optimizing only ~10<sup>2</sup> parameters, Calibri consistently enhances generation quality across SOTA models.
+      </p>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ============ ABSTRACT ============ -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-nine-tenths has-text-centered" style="max-width: 780px;">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="abstract-text">
+          <p>
+            In this paper, we uncover the hidden potential of Diffusion Transformers (DiTs) to significantly enhance generative tasks.
+            Through an in-depth analysis of the denoising process, we demonstrate that introducing a
+            <strong>single learned scaling parameter</strong> can significantly improve the performance of DiT blocks.
+            Building on this insight, we propose <em>Calibri</em>, a parameter-efficient approach that optimally calibrates
+            DiT components to elevate generative quality.
+          </p>
+          <p style="margin-top: 1rem;">
+            Calibri frames DiT calibration as a <strong>black-box reward optimization problem</strong>, efficiently solved using
+            a Covariance Matrix Adaptation Evolution Strategy (CMA-ES), modifying just <strong>~10<sup>2</sup> parameters</strong>.
+            Despite its lightweight design, Calibri consistently improves performance across
+            various text-to-image models and notably <strong>reduces the number of inference steps</strong> required —
+            all while maintaining high-quality outputs.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ============ METHOD ============ -->
+<section class="section has-background-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Method</h2>
+    
+    <div class="insight-box">
+      <strong>Key Observation:</strong> DiT blocks are not fully utilized during inference. A single scalar multiplier applied to the
+      output of a block is sufficient to meaningfully change the quality of generated images — no re-training required.
+      This motivated <em>Calibri</em>: find the optimal set of per-block scaling coefficients.
+    </div>
+  </div>
+
+  <!-- Motivational Experiment -->
+  <div class="container" style="max-width: 1200px;">
+    <div class="columns is-centered mt-4" style="margin-bottom: 0.5rem;">
+      <div class="column is-half has-text-centered">
+        <img src="figures/ir_block.png" alt="IR Block" class="responsive-image" style="width: 100%; height: auto; display: inline-block;">
+      </div>
+      <div class="column is-half has-text-centered">
+        <img src="figures/ir_scale.png" alt="IR Scale" class="responsive-image" style="width: 100%; height: auto; display: inline-block;">
+      </div>
+    </div>
+    <p style="text-align: center; font-size: 0.92rem; color: #555; margin-bottom: 2.5rem; max-width: 960px; margin-left: auto; margin-right: auto;">
+      <strong>Motivational Experiment:</strong> Our findings reveal that the contribution of DiT blocks is not fully optimized. We demonstrate that their performance can be enhanced through a straightforward output scaling using a scalar multiplier.
+    </p>
+  </div>
+
+  <div class="container is-max-desktop">
+    <div class="content-block">
+      <p>
+        The <strong>DiT architecture</strong> processes visual and text tokens through a sequence of transformer blocks.
+        <em>Calibri</em> inserts a learnable scalar at each block output, which acts as a fine-grained "volume knob" for that block's
+        contribution to the denoising trajectory.
+      </p>
+      <p>
+        Since the search space has only ~100 dimensions, we solve the calibration problem with
+        <strong>CMA-ES</strong> — an evolutionary black-box optimizer that requires no gradient signal through the network.
+        The reward is evaluated directly (e.g., HPSv3 score), making <em>Calibri</em> applicable to any differentiable and non-differentiable preference model.
+      </p>
+    </div>
+
+    <div class="figure-block">
+      <figure>
+        <div class="figure-wrap">
+          <img src="figures/evolutionary_scheme.jpg" alt="CMA-ES evolutionary optimization scheme" class="responsive-image">
+        </div>
+        <figcaption>
+          <span class="caption-title">Figure 1.</span>
+          The <em>Calibri</em> optimization loop. CMA-ES iterates over candidate scaling vectors,
+          evaluates each via a reward model, and updates the distribution to converge on optimal calibration coefficients.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ============ CALIBRI ENSEMBLE ============ -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Calibri Ensemble</h2>
+    <div class="content" style="max-width: 780px; margin: 0 auto 2rem;">
+      <p style="text-align: justify;">
+        We generalize <em>Calibri</em> to the case where multiple model outputs participate in inference, such as Classifier-Free Guidance (CFG).
+        Specifically, we optimize for an ensemble of \(N\) models simultaneously, where the combined output \( F \) is:
+      </p>
+      <div class="math-box">
+        \[ F^{\{c_i\}_{i=1}^N}(x, t, p) = \sum_{i=1}^N \omega_i f^{s_i}_{\theta}(x, t, p \mid \emptyset) \]
+      </div>
+      <p style="text-align: justify;">
+        where \( \omega_i \) denotes the weight assigned to the \( i \)-th model and \( f^{s_i}_{\theta} \) represents the model
+        calibrated with parameter set \( s_i \).
+        As shown below, <em>Calibri</em> at 15 NFE surpasses the base model running at 50 NFE.
+      </p>
+    </div>
+    <div class="columns is-centered figure-block">
+      <div class="column is-10">
+        <figure>
+          <div class="figure-wrap">
+            <img src="figures/hpsv3_vs_nfe.jpg" alt="HPSv3 vs Inference Steps" class="responsive-image">
+          </div>
+          <figcaption>
+            <span class="caption-title">Figure 2. <em>Calibri</em> vs. Base Model across inference steps.</span>
+            The x-axis shows the number of function evaluations (NFE), and the y-axis shows HPSv3 score.
+            <em>Calibri</em> (upper curve) dominates the base model at every NFE budget —
+            particularly impressive at low inference counts where it already exceeds the base model's ceiling.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ============ RESULTS ============ -->
+<section class="section has-background-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Results</h2>
+    <div class="content" style="max-width: 780px; margin: 0 auto 2.5rem;">
+      <p style="text-align: justify;">
+        We apply <em>Calibri</em> to three SOTA text-to-image models: <strong>FLUX.1-dev</strong>,
+        <strong>Stable Diffusion 3.5 Medium</strong>, and <strong>Qwen-Image</strong>.
+        <em>Calibri</em> consistently improves all preference metrics (HPSv3, ImageReward, Q-Align) while
+        <em>simultaneously cutting inference cost</em> — up to 2–3× fewer function evaluations.
+      </p>
+    </div>
+    
+    <div class="table-container">
+      <table class="table results-table is-bordered is-fullwidth is-hoverable">
+        <caption>Table 1: Quantitative evaluation of generation quality improvements across baseline models.</caption>
+        <thead>
+          <tr>
+            <th style="min-width:120px;">Model</th>
+            <th>Calibri</th>
+            <th>HPSv3 ↑</th>
+            <th>ImageReward ↑</th>
+            <th>Q-Align ↑</th>
+            <th>NFE ↓</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="2" style="vertical-align:middle; font-weight:600;">FLUX.1-dev</td>
+            <td><span class="has-text-danger">✗</span></td>
+            <td>11.41</td><td>1.15</td><td>4.85</td><td>30</td>
+          </tr>
+          <tr class="row-calibri">
+            <td><span class="has-text-success">✓</span></td>
+            <td class="best-result">13.48</td>
+            <td class="best-result">1.18</td>
+            <td class="best-result">4.88</td>
+            <td class="best-result">15</td>
+          </tr>
+          <tr>
+            <td rowspan="2" style="vertical-align:middle; font-weight:600;">SD-3.5 Medium</td>
+            <td><span class="has-text-danger">✗</span></td>
+            <td>11.15</td><td>1.10</td><td>4.74</td><td>80</td>
+          </tr>
+          <tr class="row-calibri">
+            <td><span class="has-text-success">✓</span></td>
+            <td class="best-result">14.10</td>
+            <td class="best-result">1.17</td>
+            <td class="best-result">4.91</td>
+            <td class="best-result">30</td>
+          </tr>
+          <tr>
+            <td rowspan="2" style="vertical-align:middle; font-weight:600;">Qwen Image</td>
+            <td><span class="has-text-danger">✗</span></td>
+            <td>11.26</td><td>1.16</td><td>4.55</td><td>100</td>
+          </tr>
+          <tr class="row-calibri">
+            <td><span class="has-text-success">✓</span></td>
+            <td class="best-result">12.95</td>
+            <td class="best-result">1.18</td>
+            <td class="best-result">4.73</td>
+            <td class="best-result">30</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- User Study Table -->
+    <div class="table-container" style="margin-top: 3rem;">
+      <table class="table results-table is-bordered is-fullwidth is-hoverable">
+        <caption>Table 2: Human evaluation: <em>Calibri</em> vs. Baselines win rates %.</caption>
+        <thead>
+          <tr>
+            <th rowspan="2" style="vertical-align:middle;">Methods</th>
+            <th colspan="3">Overall Preference</th>
+            <th colspan="3">Text Alignment</th>
+          </tr>
+          <tr>
+            <th><em>Calibri</em></th>
+            <th>Equal</th>
+            <th>Original</th>
+            <th><em>Calibri</em></th>
+            <th>Equal</th>
+            <th>Original</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600; text-align: left; padding-left: 1.5rem;"><em>Flux</em></td>
+            <td class="best-result">51.87</td>
+            <td>7.33</td>
+            <td>40.80</td>
+            <td class="best-result">38.71</td>
+            <td>37.68</td>
+            <td>23.61</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600; text-align: left; padding-left: 1.5rem;"><em>Qwen-Image</em></td>
+            <td class="best-result">54.62</td>
+            <td>7.91</td>
+            <td>37.47</td>
+            <td class="best-result">40.29</td>
+            <td>37.65</td>
+            <td>22.06</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="figure-block" style="margin-top: 3.5rem;">
+      <figure>
+        <div class="figure-wrap">
+          <img src="figures/qualitative_results_main.jpg" alt="Qualitative Comparison" class="responsive-image">
+        </div>
+        <figcaption>
+          <span class="caption-title">Figure 3.</span>
+          Qualitative comparisons on diverse prompts. <em>Calibri</em>-calibrated models (bottom rows)
+          produce images with higher detail, better compositional coherence, and more vivid appearance
+          compared to the base model outputs (top rows).
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ============ ALIGNMENT / FLOW-GRPO STACKING ============ -->
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Combining Calibri with Alignment Methods</h2>
+    <div class="content" style="max-width: 780px; margin: 0 auto 2rem;">
+      <p style="text-align: justify;">
+        <em>Calibri</em> is not a replacement for RL-based alignment — it is composable with it.
+        We show that <em>Calibri</em> can be applied <em>on top of Flow-GRPO</em> fine-tuned models to further push performance,
+        with <strong>10<sup>5</sup> fewer parameters</strong> than the fine-tuned backbone.
+        Crucially, <em>Calibri</em> allows targeting different metrics than the original fine-tuning objective.
+      </p>
+    </div>
+    
+    <div class="table-container" style="margin-top: 2rem;">
+      <table class="table results-table is-bordered is-fullwidth is-hoverable">
+        <caption>Table 3: Comparison of <em>Calibri</em> and Flow-GRPO on SD-3.5M. <em>Calibri</em> achieves comparable performance with 10<sup>5</sup> fewer parameters and can be combined with alignment methods to boost either the same or different target metrics.</caption>
+        <thead>
+          <tr>
+            <th>Flow-GRPO</th>
+            <th>Calibri Target</th>
+            <th>HPSv3 ↑</th>
+            <th>PickScore ↑</th>
+            <th>Q-Align ↑</th>
+            <th>NFE ↓</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="2" style="vertical-align:middle;">✗</td>
+            <td>✗</td>
+            <td>11.15</td><td>22.40</td><td>4.74</td><td>80</td>
+          </tr>
+          <tr class="row-calibri">
+            <td>PickScore</td>
+            <td class="best-result">12.47</td>
+            <td class="best-result">23.13</td>
+            <td class="best-result">4.91</td>
+            <td class="best-result">30</td>
+          </tr>
+          <tr>
+            <td rowspan="2" style="vertical-align:middle;">PickScore</td>
+            <td>✗</td>
+            <td>12.67</td><td>23.78</td><td class="best-result">4.92</td><td>80</td>
+          </tr>
+          <tr class="row-calibri">
+            <td>PickScore</td>
+            <td class="best-result">12.96</td>
+            <td class="best-result">23.93</td>
+            <td>4.85</td>
+            <td class="best-result">30</td>
+          </tr>
+          <tr>
+            <td rowspan="2" style="vertical-align:middle;">GenEval</td>
+            <td>✗</td>
+            <td>10.16</td><td>22.22</td><td>4.69</td><td>80</td>
+          </tr>
+          <tr class="row-calibri">
+            <td>HPSv3</td>
+            <td class="best-result">14.18</td>
+            <td>22.22</td>
+            <td class="best-result">4.88</td>
+            <td class="best-result">30</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="figure-block" style="margin-top: 3rem;">
+      <figure>
+        <div class="figure-wrap">
+          <img src="figures/alignment_results.jpg" alt="Alignment Results" class="responsive-image">
+        </div>
+        <figcaption>
+          <span class="caption-title">Figure 4.</span>
+          Visual comparison of base model, Flow-GRPO aligned model, and the same model with <em>Calibri</em> applied.
+          <em>Calibri</em> adds a further layer of refinement on top of the RL-trained checkpoint,
+          improving both visual aesthetics and compositional accuracy simultaneously.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<hr class="section-divider">
+
+<!-- ============ BIBTEX ============ -->
+<section class="section" id="bibtex">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">BibTeX</h2>
+    <pre class="bibtex-box">@article{tokhchukov2026calibri,
+  title     = {Calibri: Enhancing Diffusion Transformers via Parameter-Efficient Calibration},
+  author    = {Tokhchukov, Danil and Mirzoeva, Aysel and Kuznetsov, Andrey and Sobolev, Konstantin},
+  journal   = {arXiv preprint arXiv:XXXX.XXXXX},
+  year      = {2026}
+}</pre>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="has-text-centered" style="font-size: 0.9rem; color: #777;">
+      <p>
+        Website template inspired by <a href="https://nerfies.github.io">Nerfies</a>.
+        Licensed under <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
+
